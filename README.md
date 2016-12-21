@@ -1,5 +1,7 @@
 # Nsca tools library
 
+[![TravisBuild](https://travis-ci.org/tubemogul/nscatools.svg?branch=master)](https://travis-ci.org/tubemogul/nscatools)
+
 ## Introduction
 
 This library is based Nagios's NSCA server but written in Go.
