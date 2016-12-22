@@ -20,7 +20,7 @@ var testcases = []struct {
 }
 
 func testDataHandler(dp *DataPacket) error {
-	return fmt.Errorf("All good!")
+	return fmt.Errorf("all good")
 }
 
 func TestNewConfig(t *testing.T) {
@@ -42,7 +42,7 @@ func TestNewConfig(t *testing.T) {
 		case conf.MaxPluginOutputSize != 4096:
 			t.Fatalf("Unexpected plugin output size: %d. Expected: %d", conf.MaxPluginOutputSize, 4096)
 		}
-		if f := conf.PacketHandler(&DataPacket{}); f.Error() != "All good!" {
+		if f := conf.PacketHandler(&DataPacket{}); f.Error() != "all good" {
 			t.Fatalf("Handler is not returning the expected value: %s", f)
 		}
 	}
