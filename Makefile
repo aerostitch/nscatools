@@ -22,3 +22,10 @@ race:
 
 bench:
 	go test $(GO_EXTRAFLAGS) -v -bench=. -benchmem ./...
+
+gocov:
+	gocov test | gocov report
+
+install: test
+	go clean -v github.com/tubemogul/nscatools
+	go install github.com/tubemogul/nscatools
