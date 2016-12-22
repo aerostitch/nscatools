@@ -19,20 +19,20 @@ var testcases = []struct {
 	{"", "localhost", 0, 5667, 3, 3, "Blablabla", "Blablabla"},
 }
 
-func test_DataHandler(dp *DataPacket) error {
+func testDataHandler(dp *DataPacket) error {
 	return fmt.Errorf("All good!")
 }
 
 func TestNewConfig(t *testing.T) {
 	for _, tt := range testcases {
-		conf := NewConfig(tt.hostIn, tt.portIn, tt.encryptionIn, tt.passwordIn, test_DataHandler)
+		conf := NewConfig(tt.hostIn, tt.portIn, tt.encryptionIn, tt.passwordIn, testDataHandler)
 		switch {
 		case conf.Host != tt.hostOut:
 			t.Fatalf("Unexpected hostname: %s. Expected: %s", conf.Host, tt.hostOut)
 		case conf.Port != tt.portOut:
 			t.Fatalf("Unexpected port: %d. Expected: %d", conf.Port, tt.portOut)
 		case conf.EncryptionMethod != tt.encryptionOut:
-			t.Fatalf("Unexpected encryption: %s. Expected: %s", conf.EncryptionMethod, tt.encryptionOut)
+			t.Fatalf("Unexpected encryption: %d. Expected: %d", conf.EncryptionMethod, tt.encryptionOut)
 		case conf.Password != tt.passwordOut:
 			t.Fatalf("Unexpected encryption: %s. Expected: %s", conf.Password, tt.passwordOut)
 		case conf.MaxHostnameSize != 64:
