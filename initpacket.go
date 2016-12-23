@@ -16,16 +16,23 @@ type InitPacket struct {
 	Timestamp uint32
 }
 
-// NewInitPacket initialize an InitPacket with the expected values based on the password,
-// encyrption and potentially received initialization vector
-func NewInitPacket(password string, encryption int, receivedIv []byte) (*InitPacket, error) {
+// NewInitPacket initialize an InitPacket with the given initialization vector
+// and Timestamp. If you don't have a timestamp or IV and want them to be
+// generated, just pass nil to receivedIv and 0 to receivedTimestamp
+func NewInitPacket(receivedIv []byte, receivedTimestamp uint32) (*InitPacket, error) {
 	initp := InitPacket{Iv: make([]byte, 128), Timestamp: 0}
 	if receivedIv == nil {
 		if _, err := rand.Read(initp.Iv); err != nil {
 			return &initp, err
 		}
+	} else {
+		initp.Iv = receivedIv
 	}
-	initp.Timestamp = uint32(time.Now().Unix())
+	if receivedTimestamp == 0 {
+		initp.Timestamp = uint32(time.Now().Unix())
+	} else {
+		initp.Timestamp = receivedTimestamp
+	}
 	return &initp, nil
 }
 

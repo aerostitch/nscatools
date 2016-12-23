@@ -48,7 +48,7 @@ func HandleClient(conf *Config, conn net.Conn) error {
 	defer conn.Close()
 
 	// sends the initialization packet
-	ipacket, err := NewInitPacket(conf.Password, conf.EncryptionMethod, nil)
+	ipacket, err := NewInitPacket(nil, 0)
 	if err != nil {
 		logErr.Printf("[ERROR] error during the creation of the init packet: %s\n", err)
 		return err
