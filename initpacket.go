@@ -21,10 +21,9 @@ type InitPacket struct {
 // generated, just pass nil to receivedIv and 0 to receivedTimestamp
 func NewInitPacket(receivedIv []byte, receivedTimestamp uint32) (*InitPacket, error) {
 	initp := InitPacket{Iv: make([]byte, 128), Timestamp: 0}
+	var err error
 	if receivedIv == nil {
-		if _, err := rand.Read(initp.Iv); err != nil {
-			return &initp, err
-		}
+		_, err = rand.Read(initp.Iv)
 	} else {
 		initp.Iv = receivedIv
 	}
@@ -33,7 +32,7 @@ func NewInitPacket(receivedIv []byte, receivedTimestamp uint32) (*InitPacket, er
 	} else {
 		initp.Timestamp = receivedTimestamp
 	}
-	return &initp, nil
+	return &initp, err
 }
 
 // Write writes the current InitPacket to an io.Writer such as a TCPConnection
