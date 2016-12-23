@@ -25,6 +25,7 @@ bench:
 
 gocov:
 	gocov test | gocov report
+	# gocov test >/tmp/gocovtest.json ; gocov annotate /tmp/gocovtest.json
 
 install: test
 	go clean -v github.com/tubemogul/nscatools
