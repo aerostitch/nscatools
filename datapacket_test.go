@@ -19,9 +19,11 @@ var newPktCases = []struct {
 	passwordOut     []byte
 	encryptionIn    int
 	encryptionOut   int
+	bufferIn        []byte
+	bufferOut       []byte
 }{
-	{-1, 0, StateUnknown, "", "", "", []byte("foo"), []byte("foo"), []byte("bar"), []byte("bar"), 0, 0},
-	{-1, 0, StateUnknown, "", "", "", []byte("dunno"), []byte("dunno"), []byte("whatever"), []byte("whatever"), 5, 5},
+	{-1, 0, StateUnknown, "", "", "", []byte("aerosmith"), []byte("aerosmith"), []byte("freebird"), []byte("freebird"), 0, 0, []byte("breaking the law"), []byte("breaking the law")},
+	{-1, 0, StateUnknown, "", "", "", []byte("welcome to the jungle"), []byte("welcome to the jungle"), []byte("crash"), []byte("crash"), 1, 1, []byte("sympathy for the devil"), []byte{0x67, 0x6e, 0x60, 0x60, 0x66, 0x7a, 0x7f, 0x38, 0x27, 0x61, 0x2c, 0x74, 0x29, 0x62, 0x20, 0x6c, 0x27, 0x6b, 0x71, 0x72, 0x6f, 0x69}},
 }
 
 func TestNewDataPacket(t *testing.T) {
@@ -60,6 +62,21 @@ func TestNewDataPacket(t *testing.T) {
 		}
 		if pkt.Encryption != tt.encryptionOut {
 			t.Errorf("Expecting encryption: %d, got: %d\n", tt.encryptionOut, pkt.Encryption)
+		}
+	}
+}
+
+func TestXor(t *testing.T) {
+	for _, tt := range newPktCases {
+		pkt := NewDataPacket(tt.encryptionIn, tt.passwordIn, tt.ivIn)
+		pkt.xor(tt.bufferIn)
+		// When not a xor encryption, the bufferOut is not encrypted so we revert
+		// by doing a 2nd xor, checking the reversability at the same time
+		if pkt.Encryption != 1 {
+			pkt.xor(tt.bufferIn)
+		}
+		if !bytes.Equal(tt.bufferIn, tt.bufferOut) {
+			t.Errorf("Expecting buffer: %s, got: %s\n", tt.bufferOut, tt.bufferIn)
 		}
 	}
 }
