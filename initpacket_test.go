@@ -37,8 +37,8 @@ func TestNewInitPacket(t *testing.T) {
 	if len(pkt3.Iv) != 128 || len(pkt4.Iv) != 128 {
 		t.Error("Auto-generated initialization vector size incorrect")
 	}
-	// Assuming here than the tests take less than 20sec
-	if pkt2.Timestamp < timenow || pkt2.Timestamp > timenow+20 {
+	// Assuming here than the tests take less than 5sec
+	if pkt2.Timestamp < timenow || pkt2.Timestamp > timenow+5 {
 		t.Error("Auto-generated timestamp not in the right time range")
 	}
 	if pkt4.Timestamp < timenow || pkt4.Timestamp > timenow+20 {
