@@ -21,6 +21,7 @@ var newPktCases = []struct {
 	encryptionOut   int
 }{
 	{-1, 0, StateUnknown, "", "", "", []byte("foo"), []byte("foo"), []byte("bar"), []byte("bar"), 0, 0},
+	{-1, 0, StateUnknown, "", "", "", []byte("dunno"), []byte("dunno"), []byte("whatever"), []byte("whatever"), 5, 5},
 }
 
 func TestNewDataPacket(t *testing.T) {
