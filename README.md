@@ -58,16 +58,27 @@ And use the following command:
 echo "myhost mysvc 1 mymessage" | sudo /usr/sbin/send_nsca -H 127.0.0.1 -p 5667 -d ' ' -c send_nsca.cfg
 ```
 
+## Using the Makefile
+
+ * `make lint`: runs golint on your files (requires `github.com/golang/lint/golint` installed)
+ * `make fmt`: checks that the files are compliant with the gofmt format
+ * `make vet`: runs `go tool vet` on your files to ensure there's no problems
+ * `make test`: runs `make lint`, `make fmt`, `make vet` before running all the
+   test, printing also the percentage of code coverage
+ * `make race`: runs the tests with the `-race` option to detect race conditions
+ * `make bench`: runs the benchmarks
+ * `make gocov`: runs a gocov report (requires `github.com/axw/gocov/gocov`)
+ * `make install`: runs `make test` before running a clean and install
+ * `make` / `make all`: run `make test`, `make race` and `make bench`
+
 ## TODO
 
-It is currently a work in progress, so there's a big todo. Maybe come back in a
+It is currently a work in progress, so there's a bunch todo. Maybe come back in a
 few weeks to get the production-ready version! ;)
 
 * DataPacket:
    * Add and test the check of the crc32 value?
    * Add and test the packet max age check
-   * Test EncryptNone
-   * Test EncryptXor
    * Enc, Dec & test EncryptDES                // DES
    * Enc, Dec & test Encrypt3DES               // 3DES or Triple DES
    * Enc, Dec & test EncryptCAST128            // CAST-128
@@ -90,8 +101,7 @@ few weeks to get the production-ready version! ;)
    * Enc, Dec & test EncryptSAFER128           // SAFER-sk128
    * Enc, Dec & test EncryptSAFERPLUS          // SAFER+
 * Client
-* write tests
+* write more tests
 * write examples
 * write proper documentation
-* golint
 * https://godoc.org/-/about
