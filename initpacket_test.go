@@ -47,7 +47,7 @@ func TestNewInitPacket(t *testing.T) {
 
 }
 
-func TestWrite(t *testing.T) {
+func TestInitPacketWrite(t *testing.T) {
 	var b bytes.Buffer
 	iv := []byte(strings.Repeat("a", 128))
 	ivOut := make([]byte, 128)
