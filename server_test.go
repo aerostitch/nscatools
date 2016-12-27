@@ -73,20 +73,19 @@ func TestHandleClient(t *testing.T) {
 	}
 	defer listener.Close()
 
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			t.Errorf("unable to open the listener %s\n", err)
-			break
-		}
-		defer conn.Close()
-
-		expectedError := "3\n0\nremote host\napplication liveness\nI am alive!"
-		cfg := NewConfig("localhost", 5667, EncryptNone, "", returnDataAsError)
-		err = HandleClient(cfg, conn, log.New(ioutil.Discard, "", 0))
-		if err.Error() != expectedError {
-			t.Errorf("unexpected return value. Got: %s, expecting %s\n", err, expectedError)
-		}
-		break
+	// Testing only 1 connection handling here so no for loop needed
+	conn, err := listener.Accept()
+	if err != nil {
+		t.Errorf("unable to open the listener %s\n", err)
+		return
 	}
+	defer conn.Close()
+
+	expectedError := "3\n0\nremote host\napplication liveness\nI am alive!"
+	cfg := NewConfig("localhost", 5667, EncryptNone, "", returnDataAsError)
+	err = HandleClient(cfg, conn, log.New(ioutil.Discard, "", 0))
+	if err.Error() != expectedError {
+		t.Errorf("unexpected return value. Got: %s, expecting %s\n", err, expectedError)
+	}
+	return
 }
