@@ -8,11 +8,10 @@ import (
 	"os"
 )
 
-var dbg, logErr *log.Logger
-
 // StartServer starts an NSCA server
 func StartServer(conf *Config, debug bool) {
 	// Initializing logging objects
+	var dbg, logErr *log.Logger
 	debugHandle := ioutil.Discard
 	if debug {
 		debugHandle = os.Stdout
@@ -42,14 +41,15 @@ func StartServer(conf *Config, debug bool) {
 
 		// run as a goroutine
 		dbg.Printf("Receiving message...\n")
-		go HandleClient(conf, conn)
+		go HandleClient(conf, conn, logErr)
 	}
 }
 
 // HandleClient takes care of a client connection.
 // Use the PacketHandler parameter to define what you want to do with the
 // DataPacket once it is decrypted and trasformed to a DataPacket struct.
-func HandleClient(conf *Config, conn net.Conn) error {
+// Only the errors will be logged via the logger parameter
+func HandleClient(conf *Config, conn net.Conn, logErr *log.Logger) error {
 	// close connection on exit
 	defer conn.Close()
 

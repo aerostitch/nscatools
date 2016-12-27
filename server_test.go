@@ -1,66 +1,92 @@
 package nscatools
 
 import (
-	//"fmt"
-	//"net"
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net"
 	"testing"
+	"time"
 )
 
-/*
-TODO:
- * redo TestHandleClient
- * Service Checks: <host_name>[tab]<svc_description>[tab]<return_code>[tab]<plugin_output>[newline]
- * Host Checks: <host_name>[tab]<return_code>[tab]<plugin_output>[newline]
-*/
+// Helper to create a client and send data
+func sendClientMessage(t *testing.T) {
+	buf := bytes.NewBuffer([]byte{})
+	binary.Write(buf, binary.BigEndian, int16(3))
+	buf.Write(make([]byte, 2))
+	binary.Write(buf, binary.BigEndian, uint32(12345))
+	binary.Write(buf, binary.BigEndian, uint32(time.Now().Unix()))
+	binary.Write(buf, binary.BigEndian, int16(StateOK))
+	tmp := make([]byte, 64)
+	copy(tmp, "remote host")
+	buf.Write(tmp)
+	tmp = make([]byte, 128)
+	copy(tmp, "application liveness")
+	buf.Write(tmp)
+	tmp = make([]byte, 4096)
+	copy(tmp, "I am alive!")
+	buf.Write(tmp)
+	buf.Write(make([]byte, 2))
 
-// TestHandleClient tests that we can read and write data from a given socket
-// with the HandleClient function by simulating a connection attempt.
-func TestHandleClient(t *testing.T) {
-	//message := "localhost myService 1 myOutput\n"
+	conn, err := net.DialTimeout("tcp", "localhost:5667", time.Second)
+	if err != nil {
+		t.Errorf("unable to connect to the provided port: %s\n", err)
+	}
+	defer conn.Close()
 
-	//// Connection attempt
-	//go func() {
-	//	conn, err := net.Dial("tcp", ":5667")
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//	defer conn.Close()
+	if _, err = conn.Read(make([]byte, 132)); err != nil {
+		t.Errorf("unable to read from the connection: %s\n", err)
+	}
 
-	//	if _, err := fmt.Fprintf(conn, message); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//}()
+	if _, err = conn.Write(buf.Bytes()); err != nil {
+		t.Errorf("unable to write to the connection: %s\n", err)
+	}
+}
 
-	//// Listener to embed the HandleClient in.
-	//listener, err := net.Listen("tcp", ":5667")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//defer listener.Close()
-
-	//for {
-	//	conn, err := listener.Accept()
-	//	if err != nil {
-	//		return
-	//	}
-	//	defer conn.Close()
-
-	//	cfg := NewConfig("", 5667, 0, "")
-	//	buf, err := HandleClient(cfg, conn)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-
-	//	data := DataPacket{}
-	//	if msg := string(buf[:]); msg != message {
-	//		t.Logf("Buffer size: %v\n", len(buf))
-	//		t.Fatalf("Unexpected message:\nGot:\t\t-%s-\nExpected:\t-%s-\n", msg, message)
-	//	}
-	//	return // Done
-	//}
-
+// returnDataAsError is a helper that returns the informations as a string based
+// on what has been received
+func returnDataAsError(p *DataPacket) error {
+	return fmt.Errorf("%d\n%d\n%s\n%s\n%s", p.Version, p.State, p.HostName, p.Service, p.PluginOutput)
 }
 
 func TestStartServer(t *testing.T) {
 	// t.Fatalf("Not implemented...\n")
+}
+
+// TestHandleClient tests that we can read and write data from a given socket
+// with the HandleClient function by simulating a connection attempt
+func TestHandleClient(t *testing.T) {
+
+	// Connection attempt
+	go sendClientMessage(t)
+
+	// Listener to embed the HandleClient in.
+	tcpAddr, err := net.ResolveTCPAddr("tcp", "localhost:5667")
+	if err != nil {
+		t.Errorf("Unable to resolve address: %s\n", err)
+	}
+	listener, err := net.ListenTCP("tcp", tcpAddr)
+	if err != nil {
+		t.Errorf("unable to bind the port: %s\n", err)
+	}
+	defer listener.Close()
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			t.Errorf("unable to open the listener %s\n", err)
+			break
+		}
+		defer conn.Close()
+
+		expectedError := "3\n0\nremote host\napplication liveness\nI am alive!"
+		cfg := NewConfig("localhost", 5667, EncryptNone, "", returnDataAsError)
+		err = HandleClient(cfg, conn, log.New(ioutil.Discard, "", 0))
+		if err.Error() != expectedError {
+			t.Errorf("unexpected return value. Got: %s, expecting %s\n", err, expectedError)
+		}
+		break
+	}
 }
