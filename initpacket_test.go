@@ -56,19 +56,20 @@ func TestInitPacketWrite(t *testing.T) {
 
 // This part is used for testing a number of bytes written not corresponding to
 // the expected packet size.
+// Note: this is also used in datapacket_test.go
 type writerMock struct{}
 
 func (m *writerMock) Write(p []byte) (int, error) {
 	return 0, nil
 }
-func TestWriteInconsistentResult(t *testing.T) {
+func TestInitPacketWriteInconsistentResult(t *testing.T) {
 	m := writerMock{}
 	pkt, err := NewInitPacket()
 	if err != nil {
 		t.Errorf("NewInitPacket() errored: %s", err)
 	}
 	if err = pkt.Write(&m); err.Error() != "0 bytes written but the packet is 132 bytes" {
-		t.Errorf("pkt.Write() should signal inconsistent number of bytes but outputed: %s", err)
+		t.Errorf("InitPacket.Write() should signal inconsistent number of bytes but outputed: %s", err)
 	}
 }
 
