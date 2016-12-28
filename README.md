@@ -10,12 +10,14 @@ The goal is to have a library to receive the nsca calls and do whatever you want
 with the data you receive. Working on that for another application I'm writing.
 
 
-## Usage example
+## Usage examples
+
+### Create a NSCA server
 
 This example shows how to use this library to the detail of every packets you
 receive. Not very useful as is but simple enough for everybody to understand it.
 
-```
+```golang
 package main
 
 import (
@@ -41,7 +43,7 @@ func main() {
   debugHandle := os.Stdout
   dbg = log.New(debugHandle, "[DEBUG] ", log.Ldate|log.Ltime|log.Lshortfile)
 
-  cfg := nsrv.NewConfig("localhost", 5667, 1, "toto", printData)
+  cfg := nsrv.NewConfig("localhost", 5667, nsrv.EncryptXOR, "toto", printData)
   nsrv.StartServer(cfg, true)
 }
 ```
@@ -54,8 +56,32 @@ encryption_method=1
 ```
 
 And use the following command:
-```
+```sh
 echo "myhost mysvc 1 mymessage" | sudo /usr/sbin/send_nsca -H 127.0.0.1 -p 5667 -d ' ' -c send_nsca.cfg
+```
+
+### Create a NSCA client
+
+This example shows how to implement a nsca client using this library. You can
+use it directly with the running server you created in the previous example.
+
+```golang
+package main
+
+import (
+  "fmt"
+  nsrv "github.com/tubemogul/nscatools"
+)
+
+func main() {
+  cfg := nsrv.NewConfig("localhost", 5667, nsrv.EncryptXOR, "toto", nil)
+  err := nsrv.SendStatus(cfg, "myHost", "my service", nsrv.StateWarning, "You'd better fix me before I go critical")
+  if err != nil {
+    fmt.Printf("SendStatus returned an error: %s\n", err)
+  } else {
+    fmt.Println("Packet sent successfuly")
+  }
+}
 ```
 
 ## Using the Makefile
@@ -100,8 +126,5 @@ few weeks to get the production-ready version! ;)
    * Enc, Dec & test EncryptSAFER64            // SAFER-sk64
    * Enc, Dec & test EncryptSAFER128           // SAFER-sk128
    * Enc, Dec & test EncryptSAFERPLUS          // SAFER+
-* Client
-* write more tests
 * write examples
 * write proper documentation
-* https://godoc.org/-/about
