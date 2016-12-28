@@ -1,5 +1,6 @@
 # Nsca tools library
 
+[![GoDoc](https://godoc.org/github.com/tubemogul/nscatools?status.svg)](http://godoc.org/github.com/tubemogul/nscatools)
 [![TravisBuild](https://travis-ci.org/tubemogul/nscatools.svg?branch=master)](https://travis-ci.org/tubemogul/nscatools)
 
 ## Introduction
@@ -9,6 +10,8 @@ This library is based Nagios's NSCA server but written in Go.
 The goal is to have a library to receive the nsca calls and do whatever you want
 with the data you receive. Working on that for another application I'm writing.
 
+The technical documentation is available on godoc:
+[https://godoc.org/github.com/tubemogul/nscatools](https://godoc.org/github.com/tubemogul/nscatools)
 
 ## Usage examples
 
@@ -96,6 +99,19 @@ func main() {
  * `make gocov`: runs a gocov report (requires `github.com/axw/gocov/gocov`)
  * `make install`: runs `make test` before running a clean and install
  * `make` / `make all`: run `make test`, `make race` and `make bench`
+
+## Contributions
+
+Contributions to this project are welcome, though please
+[file an issue](https://github.com/tubemogul/nscatools/issues/new).
+before starting work on anything major as someone else could already be working
+on it.
+
+Contributions that do not provide the corresponding tests will not be accepted.
+Contributions that do not pass the basic gofmt, vet and other basic checks
+provided in the Makefile will not be accepted. It's just a question of trying to
+keep a basic code standard. Thanks for your help! :)
+
 
 ## TODO
 

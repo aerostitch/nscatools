@@ -1,3 +1,5 @@
+// Package nscatools is a flexible library that allows you to easily create a
+// custom NSCA (Nagios Service Check Acceptor) client and server in pure Go.
 package nscatools
 
 import (
