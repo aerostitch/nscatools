@@ -54,7 +54,7 @@ func HandleClient(conf *Config, conn net.Conn, logErr *log.Logger) error {
 	defer conn.Close()
 
 	// sends the initialization packet
-	ipacket, err := NewInitPacket(nil, 0)
+	ipacket, err := NewInitPacket()
 	if err != nil {
 		logErr.Printf("Unable to create the init packet: %s\n", err)
 		return err

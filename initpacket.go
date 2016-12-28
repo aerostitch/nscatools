@@ -16,22 +16,13 @@ type InitPacket struct {
 	Timestamp uint32
 }
 
-// NewInitPacket initialize an InitPacket with the given initialization vector
-// and Timestamp. If you don't have a timestamp or IV and want them to be
-// generated, just pass nil to receivedIv and 0 to receivedTimestamp
-func NewInitPacket(receivedIv []byte, receivedTimestamp uint32) (*InitPacket, error) {
+// NewInitPacket initialize an InitPacket by creating a random initialization
+// vector and filling the timestamp attribute with the current epoch time
+func NewInitPacket() (*InitPacket, error) {
 	initp := InitPacket{Iv: make([]byte, 128), Timestamp: 0}
 	var err error
-	if receivedIv == nil {
-		_, err = rand.Read(initp.Iv)
-	} else {
-		initp.Iv = receivedIv
-	}
-	if receivedTimestamp == 0 {
-		initp.Timestamp = uint32(time.Now().Unix())
-	} else {
-		initp.Timestamp = receivedTimestamp
-	}
+	_, err = rand.Read(initp.Iv)
+	initp.Timestamp = uint32(time.Now().Unix())
 	return &initp, err
 }
 
@@ -48,4 +39,18 @@ func (p *InitPacket) Write(w io.Writer) error {
 		err = fmt.Errorf("%d bytes written but the packet is %d bytes", n, len(b))
 	}
 	return err
+}
+
+// Read fetches the init packet from an io.Reader such as a TCPConnection and
+// fills the current InitPacket instance attributes with it
+func (p *InitPacket) Read(r io.Reader) error {
+	packet := make([]byte, 132)
+	if n, err := r.Read(packet); err != nil || n != 132 {
+		return fmt.Errorf("expecting to receive 132 bytes. Got %d and error: %s", n, err)
+	}
+
+	p.Iv = make([]byte, 128)
+	copy(p.Iv, packet[0:128])
+	p.Timestamp = binary.BigEndian.Uint32(packet[128:])
+	return nil
 }
