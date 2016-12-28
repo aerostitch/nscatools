@@ -25,7 +25,7 @@ type DataPacket struct {
 // NewDataPacket initializes a new blank data packet
 func NewDataPacket(encryption int, password, iv []byte) *DataPacket {
 	packet := DataPacket{
-		Version:      -1,
+		Version:      3,
 		Crc:          0,
 		Timestamp:    uint32(time.Now().Unix()),
 		State:        StateUnknown,
@@ -247,7 +247,38 @@ func (p *DataPacket) Encrypt(buffer []byte) error {
 // writer.
 // When encountering an error, it returns the error and don't process
 // further.
-func (p *DataPacket) Write(conn io.Writer) error {
+func (p *DataPacket) Write(w io.Writer) error {
+
+	// Build network packet
+	packet := new(bytes.Buffer)
+	binary.Write(packet, binary.BigEndian, p.Version)
+	binary.Write(packet, binary.BigEndian, make([]byte, 2))
+	binary.Write(packet, binary.BigEndian, p.Crc)
+	binary.Write(packet, binary.BigEndian, p.Timestamp)
+	binary.Write(packet, binary.BigEndian, p.State)
+	h := make([]byte, 64)
+	copy(h, p.HostName)
+	binary.Write(packet, binary.BigEndian, h)
+	s := make([]byte, 128)
+	copy(s, p.Service)
+	binary.Write(packet, binary.BigEndian, s)
+	o := make([]byte, 64)
+	copy(o, p.PluginOutput)
+	binary.Write(packet, binary.BigEndian, o)
+	binary.Write(packet, binary.BigEndian, make([]byte, 2))
+
+	// Encrypt
+	buf := make([]byte, 4304)
+	copy(buf, packet.Bytes())
+	if err := p.Encrypt(buf); err != nil {
+		return err
+	}
+
+	// Write + consistency check
+	if n, err := w.Write(buf); err != nil || n != len(buf) {
+		return fmt.Errorf("%d bytes written, expecting %d. Error: %s", n, len(buf), err)
+	}
+
 	return nil
 }
 

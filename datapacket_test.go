@@ -11,9 +11,13 @@ type pktCases []struct {
 	versionOut      int16
 	crcOut          uint32
 	timestampIn     uint32
+	stateIn         int16
 	stateOut        int16
+	hostNameIn      string
 	hostNameOut     string
+	serviceIn       string
 	serviceOut      string
+	pluginOutputIn  string
 	pluginOutputOut string
 	ivIn            []byte
 	ivOut           []byte
@@ -80,7 +84,8 @@ func buildNetworkPacket(packets *pktCases) {
 func getPktCases() *pktCases {
 	pkt := pktCases{
 		{
-			3, 0, uint32(time.Now().Unix()), StateCritical, "MyHost", "MyService", "My output", []byte("aerosmith"), []byte("aerosmith"),
+			3, 0, uint32(time.Now().Unix()), StateCritical, StateCritical, "MyHost", "MyHost",
+			"MyService", "MyService", "My output", "My output", []byte("aerosmith"), []byte("aerosmith"),
 			[]byte("freebird"), []byte("freebird"),
 			EncryptNone, EncryptNone,
 			[]byte("breaking the law"),
@@ -88,7 +93,8 @@ func getPktCases() *pktCases {
 			bytes.NewBuffer([]byte{}),
 		},
 		{
-			3, 0, uint32(time.Now().Unix()), StateOK, "localhost", "dummy service", "Everything is fine", []byte("welcome to the jungle"), []byte("welcome to the jungle"),
+			3, 0, uint32(time.Now().Unix()), StateOK, StateOK, "localhost", "localhost",
+			"dummy service", "dummy service", "Everything is fine", "Everything is fine", []byte("welcome to the jungle"), []byte("welcome to the jungle"),
 			[]byte("crash"), []byte("crash"),
 			EncryptXOR, EncryptXOR,
 			[]byte("sympathy for the devil"),
@@ -96,7 +102,8 @@ func getPktCases() *pktCases {
 			bytes.NewBuffer([]byte{}),
 		},
 		{
-			3, 0, uint32(time.Now().Unix()), StateUnknown, "127.0.0.1", "bla", "Dunno", []byte("aerosmith"), []byte("aerosmith"),
+			3, 0, uint32(time.Now().Unix()), StateUnknown, StateUnknown, "127.0.0.1", "127.0.0.1",
+			"bla", "bla", "Dunno", "Dunno", []byte("aerosmith"), []byte("aerosmith"),
 			[]byte("freebird"), []byte("freebird"),
 			EncryptRC6, EncryptRC6,
 			[]byte("breaking the law"),
@@ -118,8 +125,8 @@ func TestNewDataPacket(t *testing.T) {
 			t.Error("Auto-generated timestamp not in the right time range")
 		}
 
-		if pkt.Version != -1 {
-			t.Errorf("Expecting version: %d, got: %d\n", -1, pkt.Version)
+		if pkt.Version != 3 {
+			t.Errorf("Expecting version: %d, got: %d\n", 3, pkt.Version)
 		}
 		if pkt.Crc != tt.crcOut {
 			t.Errorf("Expecting crc: %d, got: %d\n", tt.crcOut, pkt.Crc)
@@ -255,5 +262,38 @@ func TestDataPacketReadWrongSize(t *testing.T) {
 }
 
 func TestDataPacketWrite(t *testing.T) {
-	t.Skip("Not implemented yet")
+	cases := getPktCases()
+	for _, tt := range *cases {
+		b := new(bytes.Buffer)
+		pkt := NewDataPacket(tt.encryptionIn, tt.passwordIn, tt.ivIn)
+		pkt.Timestamp = tt.timestampIn
+		pkt.State = tt.stateIn
+		pkt.HostName = tt.hostNameIn
+		pkt.Service = tt.serviceIn
+		pkt.PluginOutput = tt.pluginOutputIn
+
+		if err := pkt.Write(b); err != nil {
+			checkEncryptDecryptError(t, pkt, err)
+		}
+		// We're only testing the Write method with Xor
+		// and None as encryptions. The rest of the encryption processes are tested
+		// directly in the tests for Encrypt and Decrypt methods
+		if tt.encryptionIn != EncryptNone && tt.encryptionIn != EncryptXOR {
+			t.Logf("Note: For the test of the Read method, only encryptions None and Xor output are tested")
+			continue
+		}
+
+		if !bytes.Equal(b.Bytes(), tt.networkPacket.Bytes()) {
+			t.Errorf("expecting : %v, got: %v", tt.networkPacket.Bytes(), b.Bytes())
+		}
+	}
+}
+
+// Reusing the writerMock created in initpacket_test.go
+func TestDataPacketWriteInconsistentResult(t *testing.T) {
+	m := writerMock{}
+	pkt := NewDataPacket(0, []byte{}, make([]byte, 128))
+	if err := pkt.Write(&m); err.Error() != "0 bytes written, expecting 4304. Error: %!s(<nil>)" {
+		t.Errorf("DataPacket.Write() should signal inconsistent number of bytes but outputed: %s", err)
+	}
 }
