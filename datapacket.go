@@ -60,38 +60,28 @@ func (p *DataPacket) Read(conn io.Reader) error {
 
 	// Split the data of the full packet in the different fields
 	sep := []byte("\x00") // sep is used to extract only the useful string
-	int16Bytes := make([]byte, 2)
-	uint32Bytes := make([]byte, 4)
 
-	copy(int16Bytes, fullPacket[pos:])
+	p.Version = int16(binary.BigEndian.Uint16(fullPacket[pos : pos+2]))
 	pos += 2
-	p.Version = int16(binary.BigEndian.Uint16(int16Bytes))
 	// We don't care about those next 2 bytes
-	copy(int16Bytes, fullPacket[pos:])
 	pos += 2
-	copy(uint32Bytes, fullPacket[pos:])
-	pos += 4
-	p.Crc = binary.BigEndian.Uint32(uint32Bytes)
-	copy(uint32Bytes, fullPacket[pos:])
-	pos += 4
-	p.Timestamp = binary.BigEndian.Uint32(uint32Bytes)
-	copy(int16Bytes, fullPacket[pos:])
-	pos += 2
-	p.State = int16(binary.BigEndian.Uint16(int16Bytes))
-	host := make([]byte, 64)
 
-	copy(host, fullPacket[pos:])
+	p.Crc = binary.BigEndian.Uint32(fullPacket[pos : pos+4])
+	pos += 4
+
+	p.Timestamp = binary.BigEndian.Uint32(fullPacket[pos : pos+4])
+	pos += 4
+
+	p.State = int16(binary.BigEndian.Uint16(fullPacket[pos : pos+2]))
+	pos += 2
+
+	p.HostName = string(bytes.Split(fullPacket[pos:pos+64], sep)[0])
 	pos += 64
-	p.HostName = string(bytes.Split(host, sep)[0])
 
-	svc := make([]byte, 128)
-	copy(svc, fullPacket[pos:])
+	p.Service = string(bytes.Split(fullPacket[pos:pos+128], sep)[0])
 	pos += 128
-	p.Service = string(bytes.Split(svc, sep)[0])
 
-	output := make([]byte, 4096)
-	copy(output, fullPacket[pos:])
-	p.PluginOutput = string(bytes.Split(output, sep)[0])
+	p.PluginOutput = string(bytes.Split(fullPacket[pos:pos+4096], sep)[0])
 	// We discard the last 2 bytes
 
 	return nil
