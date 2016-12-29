@@ -23,8 +23,7 @@ func SendStatus(conf *Config, clientHost string, service string, status int16, m
 		return fmt.Errorf("unable to read the initialization vector: %s", err)
 	}
 
-	dp := NewDataPacket(conf.EncryptionMethod, []byte(conf.Password), ipkt.Iv)
-	dp.Timestamp = ipkt.Timestamp
+	dp := NewDataPacket(conf.EncryptionMethod, []byte(conf.Password), ipkt)
 	dp.HostName = clientHost
 	dp.Service = service
 	dp.State = status

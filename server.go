@@ -65,7 +65,7 @@ func HandleClient(conf *Config, conn net.Conn, logErr *log.Logger) error {
 	}
 
 	// Retrieves the data from the client
-	data := NewDataPacket(conf.EncryptionMethod, []byte(conf.Password), ipacket.Iv)
+	data := NewDataPacket(conf.EncryptionMethod, []byte(conf.Password), ipacket)
 	if err = data.Read(conn); err != nil {
 		logErr.Printf("Unable to read the data packet: %s\n", err)
 		return err

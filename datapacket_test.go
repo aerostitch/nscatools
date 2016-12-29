@@ -19,8 +19,8 @@ type pktCases []struct {
 	serviceOut      string
 	pluginOutputIn  string
 	pluginOutputOut string
-	ivIn            []byte
-	ivOut           []byte
+	ivIn            *InitPacket
+	ivOut           *InitPacket
 	passwordIn      []byte
 	passwordOut     []byte
 	encryptionIn    int
@@ -59,13 +59,13 @@ func buildNetworkPacket(packets *pktCases) {
 		case EncryptXOR:
 			buffer := buf.Bytes()
 			bufferSize := len(buffer)
-			ivSize := len(pkt.ivIn)
+			ivSize := len(pkt.ivIn.Iv)
 			pwdSize := len(pkt.passwordIn)
 			// Rotating over the initialization vector of the connection
 			for y := 0; y < bufferSize; y++ {
 				// keep rotating over IV
 				x := y % ivSize
-				buffer[y] ^= pkt.ivIn[x]
+				buffer[y] ^= pkt.ivIn.Iv[x]
 			}
 			// Then rotate again but this time on the password
 			for y := 0; y < bufferSize; y++ {
@@ -85,7 +85,8 @@ func getPktCases() *pktCases {
 	pkt := pktCases{
 		{
 			3, 0, uint32(time.Now().Unix()), StateCritical, StateCritical, "MyHost", "MyHost",
-			"MyService", "MyService", "My output", "My output", []byte("aerosmith"), []byte("aerosmith"),
+			"MyService", "MyService", "My output", "My output",
+			&InitPacket{Iv: []byte("aerosmith"), Timestamp: uint32(time.Now().Unix())}, &InitPacket{Iv: []byte("aerosmith"), Timestamp: uint32(time.Now().Unix())},
 			[]byte("freebird"), []byte("freebird"),
 			EncryptNone, EncryptNone,
 			[]byte("breaking the law"),
@@ -94,7 +95,8 @@ func getPktCases() *pktCases {
 		},
 		{
 			3, 0, uint32(time.Now().Unix()), StateOK, StateOK, "localhost", "localhost",
-			"dummy service", "dummy service", "Everything is fine", "Everything is fine", []byte("welcome to the jungle"), []byte("welcome to the jungle"),
+			"dummy service", "dummy service", "Everything is fine", "Everything is fine",
+			&InitPacket{Iv: []byte("welcome to the jungle"), Timestamp: uint32(time.Now().Unix())}, &InitPacket{Iv: []byte("welcome to the jungle"), Timestamp: uint32(time.Now().Unix())},
 			[]byte("crash"), []byte("crash"),
 			EncryptXOR, EncryptXOR,
 			[]byte("sympathy for the devil"),
@@ -103,7 +105,8 @@ func getPktCases() *pktCases {
 		},
 		{
 			3, 0, uint32(time.Now().Unix()), StateUnknown, StateUnknown, "127.0.0.1", "127.0.0.1",
-			"bla", "bla", "Dunno", "Dunno", []byte("aerosmith"), []byte("aerosmith"),
+			"bla", "bla", "Dunno", "Dunno",
+			&InitPacket{Iv: []byte("aerosmith"), Timestamp: uint32(time.Now().Unix())}, &InitPacket{Iv: []byte("aerosmith"), Timestamp: uint32(time.Now().Unix())},
 			[]byte("freebird"), []byte("freebird"),
 			EncryptRC6, EncryptRC6,
 			[]byte("breaking the law"),
@@ -143,8 +146,8 @@ func TestNewDataPacket(t *testing.T) {
 		if pkt.PluginOutput != "" {
 			t.Errorf("Expecting plugin output: %s, got: %s\n", "", pkt.PluginOutput)
 		}
-		if !bytes.Equal(pkt.Iv, tt.ivOut) {
-			t.Errorf("Expecting Iv: %s, got: %s\n", tt.ivOut, pkt.Iv)
+		if !bytes.Equal(pkt.Ipkt.Iv, tt.ivOut.Iv) {
+			t.Errorf("Expecting Iv: %s, got: %s\n", tt.ivOut.Iv, pkt.Ipkt.Iv)
 		}
 		if !bytes.Equal(pkt.Password, tt.passwordOut) {
 			t.Errorf("Expecting password: %d, got: %d\n", tt.passwordOut, pkt.Password)
@@ -253,7 +256,7 @@ func TestDataPacketRead(t *testing.T) {
 
 // Receiving a datapacket with the wrong size
 func TestDataPacketReadWrongSize(t *testing.T) {
-	pkt := NewDataPacket(0, []byte{0x00}, []byte{0x00})
+	pkt := NewDataPacket(0, []byte{0x00}, &InitPacket{})
 	if err := pkt.Read(bytes.NewBuffer(make([]byte, 10))); err != nil {
 		if err.Error() != "unexpected EOF" {
 			checkEncryptDecryptError(t, pkt, err)
@@ -292,7 +295,7 @@ func TestDataPacketWrite(t *testing.T) {
 // Reusing the writerMock created in initpacket_test.go
 func TestDataPacketWriteInconsistentResult(t *testing.T) {
 	m := writerMock{}
-	pkt := NewDataPacket(0, []byte{}, make([]byte, 128))
+	pkt := NewDataPacket(0, []byte{}, &InitPacket{})
 	if err := pkt.Write(&m); err.Error() != "0 bytes written, expecting 4304. Error: %!s(<nil>)" {
 		t.Errorf("DataPacket.Write() should signal inconsistent number of bytes but outputed: %s", err)
 	}

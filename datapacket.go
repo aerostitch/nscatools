@@ -17,13 +17,13 @@ type DataPacket struct {
 	HostName     string
 	Service      string
 	PluginOutput string
-	Iv           []byte
+	Ipkt         *InitPacket
 	Password     []byte
 	Encryption   int
 }
 
 // NewDataPacket initializes a new blank data packet
-func NewDataPacket(encryption int, password, iv []byte) *DataPacket {
+func NewDataPacket(encryption int, password []byte, ipkt *InitPacket) *DataPacket {
 	packet := DataPacket{
 		Version:      3,
 		Crc:          0,
@@ -32,7 +32,7 @@ func NewDataPacket(encryption int, password, iv []byte) *DataPacket {
 		HostName:     "",
 		Service:      "",
 		PluginOutput: "",
-		Iv:           iv,
+		Ipkt:         ipkt,
 		Password:     password,
 		Encryption:   encryption,
 	}
@@ -101,13 +101,13 @@ func (p *DataPacket) Read(conn io.Reader) error {
 // password.
 func (p *DataPacket) xor(buffer []byte) {
 	bufferSize := len(buffer)
-	ivSize := len(p.Iv)
+	ivSize := len(p.Ipkt.Iv)
 	pwdSize := len(p.Password)
 	// Rotating over the initialization vector of the connection
 	for y := 0; y < bufferSize; y++ {
 		// keep rotating over IV
 		x := y % ivSize
-		buffer[y] ^= p.Iv[x]
+		buffer[y] ^= p.Ipkt.Iv[x]
 	}
 
 	// Then rotate again but this time on the password
