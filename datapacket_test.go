@@ -264,6 +264,15 @@ func TestDataPacketReadWrongSize(t *testing.T) {
 	}
 }
 
+func BenchmarkDataPacketRead(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		cases := getPktCases()
+		tt := (*cases)[0]
+		pkt := NewDataPacket(0, []byte{}, &InitPacket{Iv: []byte("aerosmith"), Timestamp: uint32(time.Now().Unix())})
+		pkt.Read(tt.networkPacket)
+	}
+}
+
 func TestDataPacketWrite(t *testing.T) {
 	cases := getPktCases()
 	for _, tt := range *cases {
