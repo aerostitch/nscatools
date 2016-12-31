@@ -21,7 +21,10 @@ race:
 	go test $(GO_EXTRAFLAGS) -v -race ./...
 
 bench:
-	go test $(GO_EXTRAFLAGS) -v -bench=. -benchmem ./...
+	go test $(GO_EXTRAFLAGS) -v -bench=. -benchmem -cpuprofile=cpu.prof -memprofile=mem.prof ./...
+	go tool pprof -top -lines -nodecount=25 nscatools.test cpu.prof
+	go tool pprof -text -lines -nodecount=25 -alloc_space nscatools.test mem.prof
+	go tool pprof -text -lines -nodecount=25 -alloc_objects nscatools.test mem.prof
 
 gocov:
 	gocov test | gocov report

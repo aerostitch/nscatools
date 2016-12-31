@@ -62,9 +62,8 @@ func (p *DataPacket) Read(conn io.Reader) error {
 	sep := []byte("\x00") // sep is used to extract only the useful string
 
 	p.Version = int16(binary.BigEndian.Uint16(fullPacket[pos : pos+2]))
-	pos += 2
-	// We don't care about those next 2 bytes
-	pos += 2
+	// Position increment of the size of the uint16 + 2 discarded bytes
+	pos += 4
 
 	p.Crc = binary.BigEndian.Uint32(fullPacket[pos : pos+4])
 	pos += 4
@@ -81,9 +80,7 @@ func (p *DataPacket) Read(conn io.Reader) error {
 	p.Service = string(bytes.Split(fullPacket[pos:pos+128], sep)[0])
 	pos += 128
 
-	p.PluginOutput = string(bytes.Split(fullPacket[pos:pos+4096], sep)[0])
-	// We discard the last 2 bytes
-
+	p.PluginOutput = string(bytes.Split(fullPacket[pos:], sep)[0])
 	return nil
 }
 
