@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,8 +16,7 @@ import (
 func sendClientMessage(t *testing.T) {
 	buf := bytes.NewBuffer([]byte{})
 	binary.Write(buf, binary.BigEndian, int16(3))
-	buf.Write(make([]byte, 2))
-	binary.Write(buf, binary.BigEndian, uint32(12345))
+	buf.Write(make([]byte, 6))
 	binary.Write(buf, binary.BigEndian, uint32(time.Now().Unix()))
 	binary.Write(buf, binary.BigEndian, int16(StateOK))
 	tmp := make([]byte, 64)
@@ -30,6 +30,13 @@ func sendClientMessage(t *testing.T) {
 	buf.Write(tmp)
 	buf.Write(make([]byte, 2))
 
+	b := buf.Bytes()
+	crcdPacket := make([]byte, 4304)
+	copy(crcdPacket, b[0:4])
+	copy(crcdPacket[8:], b[8:])
+	crc := crc32.ChecksumIEEE(crcdPacket)
+	binary.BigEndian.PutUint32(b[4:8], crc)
+
 	conn, err := net.DialTimeout("tcp", "localhost:5667", time.Second)
 	if err != nil {
 		t.Errorf("unable to connect to the provided port: %s\n", err)
@@ -40,7 +47,7 @@ func sendClientMessage(t *testing.T) {
 		t.Errorf("unable to read from the connection: %s\n", err)
 	}
 
-	if _, err = conn.Write(buf.Bytes()); err != nil {
+	if _, err = conn.Write(b); err != nil {
 		t.Errorf("unable to write to the connection: %s\n", err)
 	}
 }

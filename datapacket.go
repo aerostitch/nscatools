@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"time"
 )
@@ -39,16 +40,23 @@ func NewDataPacket(encryption int, password []byte, ipkt *InitPacket) *DataPacke
 	return &packet
 }
 
+// CalculateCrc returns the Crc of a packet ready to be sent over the network,
+// ignoring the Crc data part of it as it's done in the original nsca code
+func (p *DataPacket) CalculateCrc(buffer []byte) uint32 {
+	crcdPacket := make([]byte, 4304)
+	copy(crcdPacket, buffer[0:4])
+	copy(crcdPacket[8:], buffer[8:])
+	return crc32.ChecksumIEEE(crcdPacket)
+}
+
 // Read gets the data packet and populates the attributes of the DataPacket
 // according. When encountering an error, it returns the error and don't process
 // further.
 //
 // TODO:
-//   * Add the check of the crc32 value?
 //   * Add the packet max age check
 func (p *DataPacket) Read(conn io.Reader) error {
 	// We need to read the full packet 1st to check the crc and decrypt it too
-	pos := 0
 	fullPacket := make([]byte, 4304)
 	if _, err := io.ReadFull(conn, fullPacket); err != nil {
 		return err
@@ -58,29 +66,64 @@ func (p *DataPacket) Read(conn io.Reader) error {
 		return err
 	}
 
+	p.Crc = binary.BigEndian.Uint32(fullPacket[4:8])
+	if crc32 := p.CalculateCrc(fullPacket); p.Crc != crc32 {
+		return fmt.Errorf("Dropping packet with invalid CRC32 - possibly due to client using wrong password or crypto algorithm?")
+	}
+
 	// Split the data of the full packet in the different fields
 	sep := []byte("\x00") // sep is used to extract only the useful string
 
-	p.Version = int16(binary.BigEndian.Uint16(fullPacket[pos : pos+2]))
-	// Position increment of the size of the uint16 + 2 discarded bytes
-	pos += 4
+	p.Version = int16(binary.BigEndian.Uint16(fullPacket[0:2]))
+	p.Timestamp = binary.BigEndian.Uint32(fullPacket[8:12])
+	p.State = int16(binary.BigEndian.Uint16(fullPacket[12:14]))
+	p.HostName = string(bytes.Split(fullPacket[14:78], sep)[0])
+	p.Service = string(bytes.Split(fullPacket[78:206], sep)[0])
+	p.PluginOutput = string(bytes.Split(fullPacket[206:], sep)[0])
 
-	p.Crc = binary.BigEndian.Uint32(fullPacket[pos : pos+4])
-	pos += 4
+	return nil
+}
 
-	p.Timestamp = binary.BigEndian.Uint32(fullPacket[pos : pos+4])
-	pos += 4
+// Write generates the buffer to write to the writer based on the populated
+// fields of the DataPacket instance encrypts it if needed and send it to the
+// writer.
+// When encountering an error, it returns the error and don't process
+// further.
+func (p *DataPacket) Write(w io.Writer) error {
 
-	p.State = int16(binary.BigEndian.Uint16(fullPacket[pos : pos+2]))
-	pos += 2
+	// Build network packet
+	packet := new(bytes.Buffer)
+	binary.Write(packet, binary.BigEndian, p.Version)
+	binary.Write(packet, binary.BigEndian, make([]byte, 6))
+	binary.Write(packet, binary.BigEndian, p.Timestamp)
+	binary.Write(packet, binary.BigEndian, p.State)
+	h := make([]byte, 64)
+	copy(h, p.HostName)
+	binary.Write(packet, binary.BigEndian, h)
+	s := make([]byte, 128)
+	copy(s, p.Service)
+	binary.Write(packet, binary.BigEndian, s)
+	o := make([]byte, 64)
+	copy(o, p.PluginOutput)
+	binary.Write(packet, binary.BigEndian, o)
+	binary.Write(packet, binary.BigEndian, make([]byte, 2))
 
-	p.HostName = string(bytes.Split(fullPacket[pos:pos+64], sep)[0])
-	pos += 64
+	buf := make([]byte, 4304)
+	copy(buf, packet.Bytes())
 
-	p.Service = string(bytes.Split(fullPacket[pos:pos+128], sep)[0])
-	pos += 128
+	// Calculate the Crc
+	binary.BigEndian.PutUint32(buf[4:8], p.CalculateCrc(buf))
 
-	p.PluginOutput = string(bytes.Split(fullPacket[pos:], sep)[0])
+	// Encrypt
+	if err := p.Encrypt(buf); err != nil {
+		return err
+	}
+
+	// Write + consistency check
+	if n, err := w.Write(buf); err != nil || n != len(buf) {
+		return fmt.Errorf("%d bytes written, expecting %d. Error: %s", n, len(buf), err)
+	}
+
 	return nil
 }
 
@@ -226,46 +269,6 @@ func (p *DataPacket) Encrypt(buffer []byte) error {
 	default:
 		return fmt.Errorf("%d is an unrecognized encryption integer", p.Encryption)
 	}
-	return nil
-}
-
-// Write generates the buffer to write to the writer based on the populated
-// fields of the DataPacket instance encrypts it if needed and send it to the
-// writer.
-// When encountering an error, it returns the error and don't process
-// further.
-func (p *DataPacket) Write(w io.Writer) error {
-
-	// Build network packet
-	packet := new(bytes.Buffer)
-	binary.Write(packet, binary.BigEndian, p.Version)
-	binary.Write(packet, binary.BigEndian, make([]byte, 2))
-	binary.Write(packet, binary.BigEndian, p.Crc)
-	binary.Write(packet, binary.BigEndian, p.Timestamp)
-	binary.Write(packet, binary.BigEndian, p.State)
-	h := make([]byte, 64)
-	copy(h, p.HostName)
-	binary.Write(packet, binary.BigEndian, h)
-	s := make([]byte, 128)
-	copy(s, p.Service)
-	binary.Write(packet, binary.BigEndian, s)
-	o := make([]byte, 64)
-	copy(o, p.PluginOutput)
-	binary.Write(packet, binary.BigEndian, o)
-	binary.Write(packet, binary.BigEndian, make([]byte, 2))
-
-	// Encrypt
-	buf := make([]byte, 4304)
-	copy(buf, packet.Bytes())
-	if err := p.Encrypt(buf); err != nil {
-		return err
-	}
-
-	// Write + consistency check
-	if n, err := w.Write(buf); err != nil || n != len(buf) {
-		return fmt.Errorf("%d bytes written, expecting %d. Error: %s", n, len(buf), err)
-	}
-
 	return nil
 }
 

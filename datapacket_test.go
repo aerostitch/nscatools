@@ -3,6 +3,7 @@ package nscatools
 import (
 	"bytes"
 	"encoding/binary"
+	"hash/crc32"
 	"testing"
 	"time"
 )
@@ -33,14 +34,13 @@ type pktCases []struct {
 // this builds the input networkPacket field based on the other fields of the
 // test case but only for the xor and None encryptions
 func buildNetworkPacket(packets *pktCases) {
-	for _, pkt := range *packets {
+	for idx, pkt := range *packets {
 		if pkt.encryptionIn != EncryptNone && pkt.encryptionIn != EncryptXOR {
 			continue
 		}
 		buf := bytes.NewBuffer([]byte{})
 		binary.Write(buf, binary.BigEndian, pkt.versionOut)
-		buf.Write(make([]byte, 2))
-		binary.Write(buf, binary.BigEndian, pkt.crcOut)
+		buf.Write(make([]byte, 6))
 		binary.Write(buf, binary.BigEndian, pkt.timestampIn)
 		binary.Write(buf, binary.BigEndian, pkt.stateOut)
 		tmp := make([]byte, 64)
@@ -53,27 +53,34 @@ func buildNetworkPacket(packets *pktCases) {
 		copy(tmp, pkt.pluginOutputOut)
 		buf.Write(tmp)
 		buf.Write(make([]byte, 2))
+
+		b := buf.Bytes()
+		crcdPacket := make([]byte, 4304)
+		copy(crcdPacket, b[0:4])
+		copy(crcdPacket[8:], b[8:])
+		(*packets)[idx].crcOut = crc32.ChecksumIEEE(crcdPacket)
+		binary.BigEndian.PutUint32(b[4:8], (*packets)[idx].crcOut)
+
 		switch pkt.encryptionIn {
 		case EncryptNone:
-			pkt.networkPacket.Write(buf.Bytes())
+			pkt.networkPacket.Write(b)
 		case EncryptXOR:
-			buffer := buf.Bytes()
-			bufferSize := len(buffer)
+			bufferSize := len(b)
 			ivSize := len(pkt.ivIn.Iv)
 			pwdSize := len(pkt.passwordIn)
 			// Rotating over the initialization vector of the connection
 			for y := 0; y < bufferSize; y++ {
 				// keep rotating over IV
 				x := y % ivSize
-				buffer[y] ^= pkt.ivIn.Iv[x]
+				b[y] ^= pkt.ivIn.Iv[x]
 			}
 			// Then rotate again but this time on the password
 			for y := 0; y < bufferSize; y++ {
 				// keep rotating over password
 				x := y % pwdSize
-				buffer[y] ^= pkt.passwordIn[x]
+				b[y] ^= pkt.passwordIn[x]
 			}
-			pkt.networkPacket.Write(buffer)
+			pkt.networkPacket.Write(b)
 		}
 
 	}
@@ -131,7 +138,7 @@ func TestNewDataPacket(t *testing.T) {
 		if pkt.Version != 3 {
 			t.Errorf("Expecting version: %d, got: %d\n", 3, pkt.Version)
 		}
-		if pkt.Crc != tt.crcOut {
+		if pkt.Crc != 0 {
 			t.Errorf("Expecting crc: %d, got: %d\n", tt.crcOut, pkt.Crc)
 		}
 		if pkt.State != 3 {
@@ -264,12 +271,23 @@ func TestDataPacketReadWrongSize(t *testing.T) {
 	}
 }
 
+// Receiving a datapacket with the wrong crc32
+func TestDataPacketReadWrongCrc32(t *testing.T) {
+	pkt := NewDataPacket(0, []byte{0x00}, &InitPacket{})
+	if err := pkt.Read(bytes.NewBuffer(make([]byte, 4304))); err != nil {
+		if err.Error() != "Dropping packet with invalid CRC32 - possibly due to client using wrong password or crypto algorithm?" {
+			checkEncryptDecryptError(t, pkt, err)
+		}
+	}
+}
+
 func BenchmarkDataPacketRead(b *testing.B) {
 	for i := 0; i < b.N; i++ {
+		pkt := NewDataPacket(0, []byte{}, &InitPacket{Iv: []byte("aerosmith"), Timestamp: uint32(time.Now().Unix())})
 		pktData := make([]byte, 4304)
 		copy(pktData, []byte{0x0, 0x3, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x58, 0x66, 0xfa, 0xeb, 0x0, 0x2, 0x4d, 0x79, 0x48, 0x6f, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4d, 0x79, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4d, 0x79, 0x20, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74})
+		binary.BigEndian.PutUint32(pktData[4:8], pkt.CalculateCrc(pktData))
 		networkPacket := bytes.NewBuffer(pktData)
-		pkt := NewDataPacket(0, []byte{}, &InitPacket{Iv: []byte("aerosmith"), Timestamp: uint32(time.Now().Unix())})
 		if err := pkt.Read(networkPacket); err != nil {
 			b.Errorf("DataPacket.Read benchmark call returned: %s\n", err)
 		}
