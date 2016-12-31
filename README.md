@@ -119,8 +119,6 @@ It is currently a work in progress, so there's a bunch todo. Maybe come back in 
 few weeks to get the production-ready version! ;)
 
 * DataPacket:
-   * Add and test the check of the crc32 value?
-   * Add and test the packet max age check
    * Enc, Dec & test EncryptDES                // DES
    * Enc, Dec & test Encrypt3DES               // 3DES or Triple DES
    * Enc, Dec & test EncryptCAST128            // CAST-128

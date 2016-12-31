@@ -52,9 +52,6 @@ func (p *DataPacket) CalculateCrc(buffer []byte) uint32 {
 // Read gets the data packet and populates the attributes of the DataPacket
 // according. When encountering an error, it returns the error and don't process
 // further.
-//
-// TODO:
-//   * Add the packet max age check
 func (p *DataPacket) Read(conn io.Reader) error {
 	// We need to read the full packet 1st to check the crc and decrypt it too
 	fullPacket := make([]byte, 4304)
@@ -71,11 +68,16 @@ func (p *DataPacket) Read(conn io.Reader) error {
 		return fmt.Errorf("Dropping packet with invalid CRC32 - possibly due to client using wrong password or crypto algorithm?")
 	}
 
-	// Split the data of the full packet in the different fields
-	sep := []byte("\x00") // sep is used to extract only the useful string
-
-	p.Version = int16(binary.BigEndian.Uint16(fullPacket[0:2]))
 	p.Timestamp = binary.BigEndian.Uint32(fullPacket[8:12])
+	// MaxPacketAge <= 0 means that we don't check it
+	if MaxPacketAge > 0 {
+		if p.Timestamp > (p.Ipkt.Timestamp+MaxPacketAge) || p.Timestamp < (p.Ipkt.Timestamp-MaxPacketAge) {
+			return fmt.Errorf("Dropping packet with stale timestamp - Max age difference is %d seconds", MaxPacketAge)
+		}
+	}
+
+	sep := []byte("\x00") // sep is used to extract only the useful string
+	p.Version = int16(binary.BigEndian.Uint16(fullPacket[0:2]))
 	p.State = int16(binary.BigEndian.Uint16(fullPacket[12:14]))
 	p.HostName = string(bytes.Split(fullPacket[14:78], sep)[0])
 	p.Service = string(bytes.Split(fullPacket[78:206], sep)[0])
@@ -310,3 +312,7 @@ const (
 	StateCritical
 	StateUnknown
 )
+
+// MaxPacketAge is the number of seconds difference allowed between the
+// initialization packet epoch and the epoch of the data packet received
+const MaxPacketAge = 30
