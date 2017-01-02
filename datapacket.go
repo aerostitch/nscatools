@@ -135,18 +135,9 @@ func (p *DataPacket) xor(buffer []byte) {
 	bufferSize := len(buffer)
 	ivSize := len(p.Ipkt.Iv)
 	pwdSize := len(p.Password)
-	// Rotating over the initialization vector of the connection
+	// Rotating over the initialization vector of the connection and the password
 	for y := 0; y < bufferSize; y++ {
-		// keep rotating over IV
-		x := y % ivSize
-		buffer[y] ^= p.Ipkt.Iv[x]
-	}
-
-	// Then rotate again but this time on the password
-	for y := 0; y < bufferSize; y++ {
-		// keep rotating over password
-		x := y % pwdSize
-		buffer[y] ^= p.Password[x]
+		buffer[y] ^= p.Ipkt.Iv[y%ivSize] ^ p.Password[y%pwdSize]
 	}
 }
 

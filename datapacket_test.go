@@ -65,20 +65,10 @@ func buildNetworkPacket(packets *pktCases) {
 		case EncryptNone:
 			pkt.networkPacket.Write(b)
 		case EncryptXOR:
-			bufferSize := len(b)
 			ivSize := len(pkt.ivIn.Iv)
 			pwdSize := len(pkt.passwordIn)
-			// Rotating over the initialization vector of the connection
-			for y := 0; y < bufferSize; y++ {
-				// keep rotating over IV
-				x := y % ivSize
-				b[y] ^= pkt.ivIn.Iv[x]
-			}
-			// Then rotate again but this time on the password
-			for y := 0; y < bufferSize; y++ {
-				// keep rotating over password
-				x := y % pwdSize
-				b[y] ^= pkt.passwordIn[x]
+			for y := 0; y < len(b); y++ {
+				b[y] ^= pkt.ivIn.Iv[y%ivSize] ^ pkt.passwordIn[y%pwdSize]
 			}
 			pkt.networkPacket.Write(b)
 		}
