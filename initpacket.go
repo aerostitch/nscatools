@@ -1,5 +1,7 @@
 // Package nscatools is a flexible library that allows you to easily create a
 // custom NSCA (Nagios Service Check Acceptor) client and server in pure Go.
+// Note: the package requires libmcrypt to work for now (under Debian-based
+// systems, the packages are named libmcrypt4 and libmcrypt-dev)
 package nscatools
 
 import (
