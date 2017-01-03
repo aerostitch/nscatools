@@ -1,6 +1,9 @@
 language: go
-sudo: false
-
+addons:
+  apt:
+    packages:
+    - libmcrypt4
+    - libmcrypt-dev
 go:
   - 1.x
   - 1.6

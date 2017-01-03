@@ -141,128 +141,124 @@ func (p *DataPacket) xor(buffer []byte) {
 	}
 }
 
+// setAlgo translates the encryption to an mcrypt-understandable from algorithm name
+func (p *DataPacket) setAlgo() string {
+	var algo string
+	switch p.Encryption {
+	case EncryptDES:
+		algo = "des"
+	case Encrypt3DES:
+		algo = "tripledes"
+	case EncryptCAST128:
+		algo = "cast-128"
+	case EncryptCAST256:
+		algo = "cast-256"
+	case EncryptXTEA:
+		algo = "xtea"
+	case Encrypt3WAY:
+		algo = "threeway"
+	case EncryptBLOWFISH:
+		algo = "blowfish"
+	case EncryptTWOFISH:
+		algo = "twofish"
+	case EncryptLOKI97:
+		algo = "loki97"
+	case EncryptRC2:
+		algo = "rc2"
+	case EncryptARCFOUR:
+		algo = "arcfour"
+	case EncryptRIJNDAEL128:
+		algo = "rijndael-128"
+	case EncryptRIJNDAEL192:
+		algo = "rijndael-192"
+	case EncryptRIJNDAEL256:
+		algo = "rijndael-256"
+	case EncryptWAKE:
+		algo = "wake"
+	case EncryptSERPENT:
+		algo = "serpent"
+	case EncryptENIGMA:
+		algo = "enigma"
+	case EncryptGOST:
+		algo = "gost"
+	case EncryptSAFER64:
+		algo = "safer-sk64"
+	case EncryptSAFER128:
+		algo = "safer-sk128"
+	case EncryptSAFERPLUS:
+		algo = "saferplus"
+	default:
+		algo = "Unknown"
+	}
+	return algo
+}
+
 // Decrypt decrypts a buffer
 func (p *DataPacket) Decrypt(buffer []byte) error {
+	var (
+		algo string
+		err  error
+	)
+
 	switch p.Encryption {
 	case EncryptNone: // Just don't do anything
 	case EncryptXOR:
 		p.xor(buffer)
-	case EncryptDES:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case Encrypt3DES:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptCAST128:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptCAST256:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptXTEA:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case Encrypt3WAY:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptBLOWFISH:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptTWOFISH:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptLOKI97:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptRC2:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptARCFOUR:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptRC6: // Unsupported in standard NSCA
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptRIJNDAEL128:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptRIJNDAEL192:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptRIJNDAEL256:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptMARS: // Unsupported in standard NSCA
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptPANAMA: // Unsupported in standard NSCA
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptWAKE:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptSERPENT:
-		return fmt.Errorf("Unimplemented encryption algorithm")
 	case EncryptIDEA: // Unsupported in standard NSCA
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptENIGMA:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptGOST:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptSAFER64:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptSAFER128:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptSAFERPLUS:
-		return fmt.Errorf("Unimplemented encryption algorithm")
+		err = fmt.Errorf("Unimplemented encryption algorithm")
+	case EncryptRC6: // Unsupported in standard NSCA
+		err = fmt.Errorf("Unimplemented encryption algorithm")
+	case EncryptMARS: // Unsupported in standard NSCA
+		err = fmt.Errorf("Unimplemented encryption algorithm")
+	case EncryptPANAMA: // Unsupported in standard NSCA
+		err = fmt.Errorf("Unimplemented encryption algorithm")
 	default:
-		return fmt.Errorf("%d is an unrecognized encryption integer", p.Encryption)
+		algo = p.setAlgo()
+		if algo == "Unknown" {
+			err = fmt.Errorf("%d is an unrecognized encryption integer", p.Encryption)
+		}
 	}
-	return nil
+	if err != nil {
+		return err
+	}
+	if algo != "" {
+		err = MCryptDecrypt(algo, buffer, p.Password, p.Ipkt.Iv)
+	}
+	return err
 }
 
 // Encrypt encrypts a buffer
 func (p *DataPacket) Encrypt(buffer []byte) error {
+	var (
+		algo string
+		err  error
+	)
+
 	switch p.Encryption {
 	case EncryptNone:
 	case EncryptXOR:
 		p.xor(buffer)
-	case EncryptDES:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case Encrypt3DES:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptCAST128:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptCAST256:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptXTEA:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case Encrypt3WAY:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptBLOWFISH:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptTWOFISH:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptLOKI97:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptRC2:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptARCFOUR:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptRC6: // Unsupported in standard NSCA
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptRIJNDAEL128:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptRIJNDAEL192:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptRIJNDAEL256:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptMARS: // Unsupported in standard NSCA
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptPANAMA: // Unsupported in standard NSCA
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptWAKE:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptSERPENT:
-		return fmt.Errorf("Unimplemented encryption algorithm")
 	case EncryptIDEA: // Unsupported in standard NSCA
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptENIGMA:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptGOST:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptSAFER64:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptSAFER128:
-		return fmt.Errorf("Unimplemented encryption algorithm")
-	case EncryptSAFERPLUS:
-		return fmt.Errorf("Unimplemented encryption algorithm")
+		err = fmt.Errorf("Unimplemented encryption algorithm")
+	case EncryptRC6: // Unsupported in standard NSCA
+		err = fmt.Errorf("Unimplemented encryption algorithm")
+	case EncryptMARS: // Unsupported in standard NSCA
+		err = fmt.Errorf("Unimplemented encryption algorithm")
+	case EncryptPANAMA: // Unsupported in standard NSCA
+		err = fmt.Errorf("Unimplemented encryption algorithm")
 	default:
-		return fmt.Errorf("%d is an unrecognized encryption integer", p.Encryption)
+		algo = p.setAlgo()
+		if algo == "Unknown" {
+			err = fmt.Errorf("%d is an unrecognized encryption integer", p.Encryption)
+		}
 	}
-	return nil
+	if err != nil {
+		return err
+	}
+	if algo != "" {
+		err = MCryptEncrypt(algo, buffer, p.Password, p.Ipkt.Iv)
+	}
+	return err
 }
 
 // Encrypt* are the encryptions supported by the standard NSCA configuration

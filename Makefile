@@ -15,7 +15,9 @@ fmt:
 	fi
 
 vet:
-	go tool vet -v *.go
+	# Verbose mode disable to get rid of the error:
+	# vet: mcrypt.go:9:8: could not import C (can't find import: )
+	go tool vet *.go
 
 race:
 	go test $(GO_EXTRAFLAGS) -v -race ./...

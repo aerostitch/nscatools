@@ -13,6 +13,12 @@ with the data you receive. Working on that for another application I'm writing.
 The technical documentation is available on godoc:
 [https://godoc.org/github.com/tubemogul/nscatools](https://godoc.org/github.com/tubemogul/nscatools)
 
+## Prerequisites
+
+For now, due to libmcrypt specificities, this library uses directly the C
+bindings of libmcrypt, so you will need the `libmcrypt4` and `libmcrypt-dev`
+packages installed (at least that's their names on Debian-based systems).
+
 ## Usage examples
 
 ### Create a NSCA server
@@ -115,30 +121,16 @@ keep a basic code standard. Thanks for your help! :)
 
 ## TODO
 
-It is currently a work in progress, so there's a bunch todo. Maybe come back in a
-few weeks to get the production-ready version! ;)
+For now the following algorithms are not properly handled, so they need to be
+fixed:
+* 3WAY
+* ARCFOUR
+* WAKE
+* ENIGMA
+* SAFER64
+* SAFER128
 
-* DataPacket:
-   * Enc, Dec & test EncryptDES                // DES
-   * Enc, Dec & test Encrypt3DES               // 3DES or Triple DES
-   * Enc, Dec & test EncryptCAST128            // CAST-128
-   * Enc, Dec & test EncryptCAST256            // CAST-256
-   * Enc, Dec & test EncryptXTEA               // xTEA
-   * Enc, Dec & test Encrypt3WAY               // 3-WAY
-   * Enc, Dec & test EncryptBLOWFISH           // SKIPJACK
-   * Enc, Dec & test EncryptTWOFISH            // TWOFISH
-   * Enc, Dec & test EncryptLOKI97             // LOKI97
-   * Enc, Dec & test EncryptRC2                // RC2
-   * Enc, Dec & test EncryptARCFOUR            // RC4
-   * Enc, Dec & test EncryptRIJNDAEL128        // AES-128
-   * Enc, Dec & test EncryptRIJNDAEL192        // AES-192
-   * Enc, Dec & test EncryptRIJNDAEL256        // AES-256
-   * Enc, Dec & test EncryptWAKE               // WAKE
-   * Enc, Dec & test EncryptSERPENT            // SERPENT
-   * Enc, Dec & test EncryptENIGMA             // ENIGMA (Unix crypt)
-   * Enc, Dec & test EncryptGOST               // GOST
-   * Enc, Dec & test EncryptSAFER64            // SAFER-sk64
-   * Enc, Dec & test EncryptSAFER128           // SAFER-sk128
-   * Enc, Dec & test EncryptSAFERPLUS          // SAFER+
+Nice to have:
+* get rid of the libmcrypt C bindings to rely only on pure Go
 * write examples
-* write proper documentation
+* write more benchmark
